@@ -1,6 +1,6 @@
 {
   "name": "geojson-derived-properties",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Add derived geometric properties to geojson features.",
   "main": "index.js",
   "bin": "./cli.js",
