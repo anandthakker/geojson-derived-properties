@@ -1,32 +1,33 @@
-#!/usr/bin/env node
 var area = require('turf-area')
-var geojsonStream = require('geojson-stream')
-var through = require('through2')
+var length = require('turf-line-distance')
 
 module.exports = addDerivedProperties
 
-function addDerivedProperties (feature) {
+/**
+ * Add area, perimeter, and length properties to geojson features.
+ *
+ * @param {Object} properties - the properties to add: this should be an object mapping keys 'area', 'perimeter', 'length' to truthy/falsy values
+ * @param {Feature|FeatureCollection|Array<Feature>} feature
+ * @returns {Feature|FeatureCollection|Array<Feature>}
+ */
+function addDerivedProperties (properties, feature) {
   if (Array.isArray(feature)) {
-    return feature.map(addDerivedProperties)
+    return feature.map(addDerivedProperties.bind(null, properties))
   }
   if (feature.type === 'FeatureCollection') {
-    return addDerivedProperties(feature.features)
+    return addDerivedProperties(properties, feature.features)
   }
 
-  if (feature.geometry.type === 'Polygon') {
-    feature.properties['area'] = area(feature)
+  if (feature.geometry.type === 'Polygon' ||
+  feature.geometry.type === 'MultiPolygon') {
+    if (properties.area) feature.properties['area'] = area(feature)
+    if (properties.perimeter) feature.properties['perimeter'] = 1000 * length(feature, 'kilometers')
+  }
+
+  if (feature.geometry.type === 'LineString' ||
+  feature.geometry.type === 'MultieLineString') {
+    if (properties.length) feature.properties['length'] = 1000 * length(feature, 'kilometers')
   }
 
   return feature
-}
-
-process.stdin
-  .pipe(geojsonStream.parse())
-  .pipe(through.obj(write))
-  .pipe(geojsonStream.stringify())
-  .pipe(process.stdout)
-
-function write (data, enc, next) {
-  this.push(addDerivedProperties(data))
-  next()
 }
